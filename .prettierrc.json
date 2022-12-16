@@ -3,7 +3,7 @@
   "bracketSameLine": false,
   "bracketSpacing": true,
   "jsxSingleQuote": false,
-  "parser": "babel",
+  "parser": "babel-ts",
   "printWidth": 100,
   "quoteProps": "as-needed",
   "semi": false,

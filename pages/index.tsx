@@ -17,8 +17,8 @@ const Home = () => (
     </Head>
     <main className={styles.main}>
       <div className={styles.description}>
-        <a href="/api/auth/login">Login</a>
-        <a href="/api/auth/logout">Logout</a>
+        <Link href="/api/auth/login">Login</Link>
+        <Link href="/api/auth/logout">Logout</Link>
         <Link href="/profile">Profile</Link>
         <p>
           Get started by editing&nbsp;
