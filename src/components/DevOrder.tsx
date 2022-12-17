@@ -1,13 +1,6 @@
-import { useState } from 'react'
-
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Checkbox from '@mui/material/Checkbox'
-import List from '@mui/material/List'
-import ListItem from '@mui/material/ListItem'
-import ListItemButton from '@mui/material/ListItemButton'
-import ListItemIcon from '@mui/material/ListItemIcon'
-import ListItemText from '@mui/material/ListItemText'
+import CircularProgress from '@mui/material/CircularProgress'
 import Paper from '@mui/material/Paper'
 import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
@@ -15,20 +8,13 @@ import useSWRImmutable from 'swr/immutable'
 
 import fetcher from 'src/services/fetcher'
 
+import DevList from './DevList'
+
 const DevOrder = () => {
   const { data, error, isLoading, mutate } = useSWRImmutable('/api/shuffle', fetcher)
 
   const theme = useTheme()
   const matches = useMediaQuery(theme.breakpoints.up('sm'))
-
-  const [selected, setSelected] = useState<string[]>([])
-
-  const onSelect = (value: string) =>
-    setSelected(prevSelected =>
-      prevSelected.includes(value)
-        ? prevSelected.filter(prevValue => prevValue !== value)
-        : [...prevSelected, value]
-    )
 
   return (
     <>
@@ -42,24 +28,21 @@ const DevOrder = () => {
           width: '90%'
         }}
       >
-        <List sx={{ width: '100%' }}>
-          {data?.names?.map((name: string) => (
-            <ListItem disablePadding key={name}>
-              <ListItemButton dense onClick={() => onSelect(name)}>
-                <ListItemIcon>
-                  <Checkbox
-                    checked={selected.includes(name)}
-                    disableRipple
-                    edge="start"
-                    inputProps={{ 'aria-labelledby': `checkbox-list-label-${name}` }}
-                    tabIndex={-1}
-                  />
-                </ListItemIcon>
-                <ListItemText id={`checkbox-list-label-${name}`} primary={name} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
+        {isLoading || !data?.names?.length ? (
+          <Box
+            sx={{
+              alignItems: 'center',
+              display: 'flex',
+              height: '266px',
+              justifyContent: 'center',
+              width: '100%'
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        ) : (
+          <DevList names={data?.names || []} />
+        )}
       </Paper>
       <Box sx={{ alignSelf: 'center', maxWidth: '600px', width: '90%' }}>
         <Button fullWidth onClick={mutate} size="large" variant="contained">
