@@ -31,6 +31,7 @@ export const createConnection = (): Connection =>
         database: process.env.PLANETSCALE_DB,
         host: process.env.PLANETSCALE_DB_HOST,
         password: process.env.PLANETSCALE_DB_PASSWORD,
+        ssl: process.env.PLANETSCALE_SSL_CERT_PATH,
         user: process.env.PLANETSCALE_DB_USERNAME
       })
 
