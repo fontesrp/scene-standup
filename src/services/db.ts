@@ -25,15 +25,7 @@ export type TeamMember = {
 }
 
 export const createConnection = (): Connection =>
-  process.env.NODE_ENV === 'development'
-    ? mysql.createConnection(process.env.DATABASE_URL || '')
-    : mysql.createConnection({
-        database: process.env.PLANETSCALE_DB,
-        host: process.env.PLANETSCALE_DB_HOST,
-        password: process.env.PLANETSCALE_DB_PASSWORD,
-        ssl: process.env.PLANETSCALE_SSL_CERT_PATH,
-        user: process.env.PLANETSCALE_DB_USERNAME
-      })
+  mysql.createConnection(process.env.DATABASE_URL || '')
 
 export const query = (connection: Connection, sql: string): Promise<QueryData> =>
   new Promise((resolve, reject) =>
