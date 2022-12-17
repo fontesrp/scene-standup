@@ -13,7 +13,7 @@ const Home = () => (
       <header>
         <Profile />
       </header>
-      <Link href="/api/auth/login">Login</Link>
+      {/*<Link href="/api/auth/login">Login</Link>*/}
       <DevOrder />
     </main>
   </>

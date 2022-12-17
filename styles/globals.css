@@ -81,6 +81,7 @@
 
 html,
 body {
+  height: 100%;
   max-width: 100vw;
   overflow-x: hidden;
 }
@@ -103,4 +104,10 @@ header {
   html {
     color-scheme: dark;
   }
+}
+
+#__next, main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
