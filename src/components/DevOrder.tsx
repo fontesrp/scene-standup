@@ -1,7 +1,6 @@
 import { useUser } from '@auth0/nextjs-auth0/client'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import CircularProgress from '@mui/material/CircularProgress'
 import Paper from '@mui/material/Paper'
 import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
@@ -12,6 +11,7 @@ import fetcher from 'src/services/fetcher'
 import DevList from './DevList'
 import Loading from './Loading'
 import Login from './Login'
+import Uninvited from './Uninvited'
 
 const DevOrder = () => {
   const {
@@ -30,14 +30,12 @@ const DevOrder = () => {
   const showLogin =
     !!userError || isUserLoading || !user?.email || errorMessage.includes('not_authenticated')
 
-  console.log('requestError', requestError)
+  const isUninvited = errorMessage.includes('Invalid session')
 
   return (
     <>
       {matches && <Box sx={{ flex: 1 }} />}
-      {showLogin ? (
-        <Login />
-      ) : (
+      {(showLogin && <Login />) || (isUninvited && <Uninvited />) || (
         <>
           <Paper
             variant="outlined"
@@ -51,7 +49,7 @@ const DevOrder = () => {
             {isRequestLoading || !data?.names?.length ? (
               <Loading />
             ) : (
-              <DevList names={data?.names || []} />
+              <DevList names={data.names} />
             )}
           </Paper>
           <Box sx={{ alignSelf: 'center', maxWidth: '600px', width: '90%' }}>
