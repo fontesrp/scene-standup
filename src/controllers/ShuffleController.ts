@@ -29,9 +29,7 @@ const saveNewPermutation = async (
   await db.addStandupOrder(connection, teamMembers.map(teamMember => teamMember.id).join(','))
 }
 
-export const getNamesPermutation = async (): Promise<string[]> => {
-  const connection = db.createConnection()
-
+export const getNamesPermutation = async (connection: Connection): Promise<string[]> => {
   const teamMembers = await db.getTeamMembers(connection)
   const prevStandups = await db.getStandupOrder(connection)
 

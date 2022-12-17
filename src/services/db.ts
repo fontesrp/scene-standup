@@ -75,3 +75,9 @@ export const getTeamMembers = async (connection: Connection): Promise<[TeamMembe
   const { results } = await query(connection, 'SELECT id, name FROM team_members')
   return results
 }
+
+export const isUserInvited = async (connection: Connection, email: string): Promise<boolean> => {
+  const sql = mysql.format('SELECT id FROM invited_users WHERE email = ?', [email])
+  const { results } = await query(connection, sql)
+  return !!results?.length
+}

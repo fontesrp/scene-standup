@@ -2,6 +2,7 @@ import { getSession, withApiAuthRequired } from '@auth0/nextjs-auth0'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 import * as ShuffleController from 'src/controllers/ShuffleController'
+import * as db from 'src/services/db'
 
 type Data = {
   error?: string
@@ -13,24 +14,31 @@ const handler = async (req: NextApiRequest, res: NextApiResponse<Data>) => {
     const session = await getSession(req, res)
     const { email, sub } = session?.user || {}
 
-    const allowedEmails = (process.env.ALLOWED_EMAILS || '').split(',')
     const loggedInWithGoogle = (sub || '').startsWith('google')
 
-    if (!loggedInWithGoogle || !allowedEmails.includes(email)) {
+    if (!loggedInWithGoogle) {
       throw new Error('Invalid session')
     }
 
-    const teamMembers = await ShuffleController.getNamesPermutation()
+    const connection = db.createConnection()
+
+    const isInvited = await db.isUserInvited(connection, email)
+
+    if (!isInvited) {
+      throw new Error('Invalid session')
+    }
+
+    const teamMembers = await ShuffleController.getNamesPermutation(connection)
 
     res.status(200).json({ names: teamMembers })
   } catch (error) {
-    let name = 'unknown'
+    let message = 'unknown'
 
     if (error instanceof Error) {
-      name = error.message
+      message = error.message
     }
 
-    res.status(500).json({ error: name })
+    res.status(500).json({ error: message })
   }
 }
 
