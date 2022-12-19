@@ -33,6 +33,9 @@
     "lint-staged": "^13.1.0",
     "prettier": "2.8.1"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "lint-staged": {
     "**/*.ts": "prettier --write --ignore-unknown",
     "**/*.tsx": "prettier --write --ignore-unknown"
