@@ -8,41 +8,56 @@ const maxStandupsStored = 15
 const saveNewPermutation = async (
   connection: Connection,
   teamMembers: db.TeamMember[],
-  prevStandups: db.StandupOrder[]
+  prevStandups: number[]
 ) => {
   // Don't keep the request hanging
   await Promise.resolve()
 
   if (prevStandups.length >= maxStandupsStored) {
-    const oldest = prevStandups
-      .sort(
-        (prevStandup1, prevStandup2) =>
-          prevStandup2.createdAt.getTime() - prevStandup1.createdAt.getTime()
-      )
-      .pop()
-
-    if (oldest?.id) {
-      await db.deleteStandupOrder(connection, oldest.id)
-    }
+    const oldestStandupId = await db.getOldestStandupId(connection)
+    await db.deleteStandupOrders(connection, oldestStandupId)
+    await db.deleteStandups(connection, oldestStandupId)
   }
 
-  await db.addStandupOrder(connection, teamMembers.map(teamMember => teamMember.id).join(','))
+  const newStandupId = await db.addStandups(connection)
+
+  const values = teamMembers
+    .map((teamMember, idx) =>
+      [newStandupId, teamMember.id, idx].map(value => connection.escape(value)).join(',')
+    )
+    .map(values => `(${values})`)
+    .join(',')
+
+  await db.addStandupOrders(connection, values)
 }
 
 export const getNamesPermutation = async (connection: Connection): Promise<string[]> => {
   const teamMembers = await db.getTeamMembers(connection)
-  const prevStandups = await db.getStandupOrder(connection)
+  const standupOrders = await db.getStandupOrders(connection)
+
+  const prevStandups = standupOrders.reduce<{ [key: string]: number[] }>(
+    (acc, standupOrder) => ({
+      ...acc,
+      [`${standupOrder.standupsId}`]: [
+        ...(acc[`${standupOrder.standupsId}`] || []),
+        standupOrder.teamMembersId
+      ]
+    }),
+    {}
+  )
+
+  const prevOrders = Object.values(prevStandups).map(teamMembersIds => teamMembersIds.join(','))
 
   let isDuplicate
 
   do {
     shuffleInPlace(teamMembers)
     const teamMembersIds = teamMembers.map(teamMember => teamMember.id).join(',')
-    // The number of permutations must be greater than `maxStandupsStored`
-    isDuplicate = prevStandups.some(prevStandup => prevStandup.teamMembersIds === teamMembersIds)
+    // The number of possible permutations must be greater than `maxStandupsStored`
+    isDuplicate = prevOrders.includes(teamMembersIds)
   } while (isDuplicate)
 
-  saveNewPermutation(connection, teamMembers, prevStandups)
+  saveNewPermutation(connection, teamMembers, Object.keys(prevStandups).map(Number))
 
   return teamMembers.map(teamMember => teamMember.name)
 }

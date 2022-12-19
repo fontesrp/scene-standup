@@ -7,16 +7,18 @@ type QueryData = {
   results: any
 }
 
-export type StandupOrder = {
-  createdAt: Date
+type StandupOrder = {
   id: number
-  teamMembersIds: string
+  memberOrder: number
+  standupsId: number
+  teamMembersId: number
 }
 
 type StandupOrderDb = {
-  created_at: Date
   id: number
-  team_members_ids: string
+  member_order: number
+  standups_id: number
+  team_members_id: number
 }
 
 export type TeamMember = {
@@ -24,10 +26,7 @@ export type TeamMember = {
   name: string
 }
 
-export const createConnection = (): Connection =>
-  mysql.createConnection(process.env.DATABASE_URL || '')
-
-export const query = (connection: Connection, sql: string): Promise<QueryData> =>
+const query = (connection: Connection, sql: string): Promise<QueryData> =>
   new Promise((resolve, reject) =>
     connection.query(sql, (err, results, fields) => {
       if (err) {
@@ -38,36 +37,59 @@ export const query = (connection: Connection, sql: string): Promise<QueryData> =
     })
   )
 
-export const addStandupOrder = async (
-  connection: Connection,
-  teamMembersIds: StandupOrder['teamMembersIds']
-): Promise<AffectedRows> => {
-  const sql = mysql.format('INSERT INTO standup_order (team_members_ids) VALUES (?)', [
-    teamMembersIds
-  ])
-  const { results } = await query(connection, sql)
-  return results.affectedRows
+export const addStandups = async (connection: Connection): Promise<number> => {
+  const { results } = await query(connection, 'INSERT INTO standups (created_at) VALUES (NOW())')
+  return results.insertId
 }
 
-export const deleteStandupOrder = async (
+export const addStandupOrders = async (
   connection: Connection,
-  id: number
+  values: string
 ): Promise<AffectedRows> => {
-  const sql = mysql.format('DELETE FROM standup_order WHERE id = ?', [id])
-  const { results } = await query(connection, sql)
-  return results.affectedRows
-}
-
-export const getStandupOrder = async (connection: Connection): Promise<[StandupOrder]> => {
+  // Values are escaped by the controller
   const { results } = await query(
     connection,
-    'SELECT created_at, id, team_members_ids FROM standup_order'
+    `INSERT INTO standup_orders (standups_id, team_members_id, member_order) VALUES ${values}`
+  )
+  return results.affectedRows
+}
+
+export const createConnection = (): Connection =>
+  mysql.createConnection(process.env.DATABASE_URL || '')
+
+export const deleteStandups = async (connection: Connection, id: number): Promise<AffectedRows> => {
+  const sql = mysql.format('DELETE FROM standups WHERE id = ?', [id])
+  const { results } = await query(connection, sql)
+  return results.affectedRows
+}
+
+export const deleteStandupOrders = async (
+  connection: Connection,
+  standupsId: number
+): Promise<AffectedRows> => {
+  const sql = mysql.format('DELETE FROM standup_orders WHERE standups_id = ?', [standupsId])
+  const { results } = await query(connection, sql)
+  return results.affectedRows
+}
+
+export const getOldestStandupId = async (connection: Connection): Promise<number> => {
+  const { results } = await query(connection, 'SELECT id FROM standups ORDER BY created_at LIMIT 1')
+  return results?.[0]?.id || 0
+}
+
+export const getStandupOrders = async (connection: Connection): Promise<[StandupOrder]> => {
+  const { results } = await query(
+    connection,
+    `SELECT id, standups_id, team_members_id, member_order
+    FROM standup_orders
+    ORDER BY standups_id, member_order`
   )
 
-  return results.map(({ created_at, id, team_members_ids }: StandupOrderDb) => ({
-    createdAt: created_at,
-    id,
-    teamMembersIds: team_members_ids
+  return results.map(({ id, member_order, standups_id, team_members_id }: StandupOrderDb) => ({
+    id: id,
+    memberOrder: member_order,
+    standupsId: standups_id,
+    teamMembersId: team_members_id
   }))
 }
 
