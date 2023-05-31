@@ -35,16 +35,17 @@ export const getNamesPermutation = async (connection: Connection): Promise<strin
   const teamMembers = await db.getTeamMembers(connection)
   const standupOrders = await db.getStandupOrders(connection)
 
-  const prevStandups = standupOrders.reduce<{ [key: string]: number[] }>(
-    (acc, standupOrder) => ({
-      ...acc,
-      [`${standupOrder.standupsId}`]: [
-        ...(acc[`${standupOrder.standupsId}`] || []),
-        standupOrder.teamMembersId
-      ]
-    }),
-    {}
-  )
+  const prevStandups = standupOrders.reduce<{ [key: string]: number[] }>((acc, standupOrder) => {
+    const standupKey = `${standupOrder.standupsId}`
+
+    if (acc[standupKey]) {
+      acc[standupKey].push(standupOrder.teamMembersId)
+    } else {
+      acc[standupKey] = [standupOrder.teamMembersId]
+    }
+
+    return acc
+  }, {})
 
   const prevOrders = Object.values(prevStandups).map(teamMembersIds => teamMembersIds.join(','))
 
