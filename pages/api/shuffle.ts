@@ -20,15 +20,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse<Data>) => {
       throw new Error('Invalid session')
     }
 
-    const connection = db.createConnection()
-
-    const isInvited = await db.isUserInvited(connection, email)
+    const isInvited = db.isUserInvited(email)
 
     if (!isInvited) {
       throw new Error('Invalid session')
     }
 
-    const teamMembers = await ShuffleController.getNamesPermutation(connection)
+    const teamMembers = await ShuffleController.getNamesPermutation()
 
     res.status(200).json({ names: teamMembers })
   } catch (error) {

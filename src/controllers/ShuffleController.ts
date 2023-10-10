@@ -1,47 +1,40 @@
-import { Connection } from 'mysql2'
-
 import * as db from 'src/services/db'
 import { shuffleInPlace } from 'src/services/util'
 
 const maxStandupsStored = 15
 
-const saveNewPermutation = async (
-  connection: Connection,
-  teamMembers: db.TeamMember[],
-  prevStandups: number[]
-) => {
+const saveNewPermutation = async (teamMembers: db.TeamMember[], prevStandups: number[]) => {
   // Don't keep the request hanging
   await Promise.resolve()
 
   if (prevStandups.length >= maxStandupsStored) {
-    const oldestStandupId = await db.getOldestStandupId(connection)
-    await db.deleteStandupOrders(connection, oldestStandupId)
-    await db.deleteStandups(connection, oldestStandupId)
+    const oldestStandupId = db.getOldestStandupId()
+    db.deleteStandupOrders(oldestStandupId)
+    db.deleteStandups(oldestStandupId)
   }
 
-  const newStandupId = await db.addStandups(connection)
+  const newStandupId = db.addStandups()
 
-  const values = teamMembers
-    .map((teamMember, idx) =>
-      [newStandupId, teamMember.id, idx].map(value => connection.escape(value)).join(',')
-    )
-    .map(values => `(${values})`)
-    .join(',')
+  const values = teamMembers.map((teamMember, idx) => ({
+    member_order: idx,
+    standups_id: newStandupId,
+    team_members_id: teamMember.id
+  }))
 
-  await db.addStandupOrders(connection, values)
+  db.addStandupOrders(values)
 }
 
-export const getNamesPermutation = async (connection: Connection): Promise<string[]> => {
-  const teamMembers = await db.getTeamMembers(connection)
-  const standupOrders = await db.getStandupOrders(connection)
+export const getNamesPermutation = async (): Promise<string[]> => {
+  const teamMembers = db.getTeamMembers()
+  const standupOrders = db.getStandupOrders()
 
   const prevStandups = standupOrders.reduce<{ [key: string]: number[] }>((acc, standupOrder) => {
-    const standupKey = `${standupOrder.standupsId}`
+    const standupKey = `${standupOrder.standups_id}`
 
     if (acc[standupKey]) {
-      acc[standupKey].push(standupOrder.teamMembersId)
+      acc[standupKey].push(standupOrder.team_members_id)
     } else {
-      acc[standupKey] = [standupOrder.teamMembersId]
+      acc[standupKey] = [standupOrder.team_members_id]
     }
 
     return acc
@@ -58,7 +51,7 @@ export const getNamesPermutation = async (connection: Connection): Promise<strin
     isDuplicate = prevOrders.includes(teamMembersIds)
   } while (isDuplicate)
 
-  saveNewPermutation(connection, teamMembers, Object.keys(prevStandups).map(Number))
+  saveNewPermutation(teamMembers, Object.keys(prevStandups).map(Number))
 
   return teamMembers.map(teamMember => teamMember.name)
 }

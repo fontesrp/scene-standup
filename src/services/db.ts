@@ -1,24 +1,20 @@
-import mysql, { Connection, FieldPacket } from 'mysql2'
-
-type AffectedRows = number
-
-type QueryData = {
-  fields: FieldPacket[]
-  results: any
+type InvitedUser = {
+  id: number
+  email: string
 }
 
 type StandupOrder = {
   id: number
-  memberOrder: number
-  standupsId: number
-  teamMembersId: number
-}
-
-type StandupOrderDb = {
-  id: number
   member_order: number
   standups_id: number
   team_members_id: number
+}
+
+type StandupOrderInsert = Omit<StandupOrder, 'id'>
+
+type Standup = {
+  id: number
+  created_at: number
 }
 
 export type TeamMember = {
@@ -26,80 +22,65 @@ export type TeamMember = {
   name: string
 }
 
-const query = (connection: Connection, sql: string): Promise<QueryData> =>
-  new Promise((resolve, reject) =>
-    connection.query(sql, (err, results, fields) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve({ fields, results })
-      }
-    })
+const inMemoryDb = new Map<String, any>()
+
+inMemoryDb.set('invited_users', JSON.parse(process.env.INVITED_USERS || '[]'))
+inMemoryDb.set('team_members', JSON.parse(process.env.TEAM_MEMBERS || '[]'))
+
+export const addStandups = () => {
+  const standups: Standup[] = inMemoryDb.get('standups') || []
+  const standup = { id: standups.length, created_at: Date.now() }
+  standups.push(standup)
+  inMemoryDb.set('standups', standups)
+  return standup.id
+}
+
+export const addStandupOrders = (values: StandupOrderInsert[]) => {
+  const standupOrders: StandupOrder[] = inMemoryDb.get('standup_orders') || []
+  standupOrders.push(...values.map((value, idx) => ({ ...value, id: standupOrders.length + idx })))
+  inMemoryDb.set('standup_orders', standupOrders)
+}
+
+export const deleteStandups = (id: number) => {
+  const standups: Standup[] = inMemoryDb.get('standups') || []
+  inMemoryDb.set(
+    'standups',
+    standups.filter(standup => standup.id !== id)
   )
-
-export const addStandups = async (connection: Connection): Promise<number> => {
-  const { results } = await query(connection, 'INSERT INTO standups (created_at) VALUES (NOW())')
-  return results.insertId
 }
 
-export const addStandupOrders = async (
-  connection: Connection,
-  values: string
-): Promise<AffectedRows> => {
-  // Values are escaped by the controller
-  const { results } = await query(
-    connection,
-    `INSERT INTO standup_orders (standups_id, team_members_id, member_order) VALUES ${values}`
+export const deleteStandupOrders = async (standupsId: number) => {
+  const standupOrders: StandupOrder[] = inMemoryDb.get('standup_orders') || []
+  inMemoryDb.set(
+    'standup_orders',
+    standupOrders.filter(standupOrder => standupOrder.standups_id !== standupsId)
   )
-  return results.affectedRows
 }
 
-export const createConnection = (): Connection =>
-  mysql.createConnection(process.env.DATABASE_URL || '')
-
-export const deleteStandups = async (connection: Connection, id: number): Promise<AffectedRows> => {
-  const sql = mysql.format('DELETE FROM standups WHERE id = ?', [id])
-  const { results } = await query(connection, sql)
-  return results.affectedRows
-}
-
-export const deleteStandupOrders = async (
-  connection: Connection,
-  standupsId: number
-): Promise<AffectedRows> => {
-  const sql = mysql.format('DELETE FROM standup_orders WHERE standups_id = ?', [standupsId])
-  const { results } = await query(connection, sql)
-  return results.affectedRows
-}
-
-export const getOldestStandupId = async (connection: Connection): Promise<number> => {
-  const { results } = await query(connection, 'SELECT id FROM standups ORDER BY created_at LIMIT 1')
-  return results?.[0]?.id || 0
-}
-
-export const getStandupOrders = async (connection: Connection): Promise<[StandupOrder]> => {
-  const { results } = await query(
-    connection,
-    `SELECT id, standups_id, team_members_id, member_order
-    FROM standup_orders
-    ORDER BY standups_id, member_order`
+export const getOldestStandupId = (): number => {
+  const standups: Standup[] = inMemoryDb.get('standups') || []
+  const standupsCopy = [...standups]
+  return (
+    standupsCopy.sort((standup1, standup2) => standup1.created_at - standup2.created_at)[0]?.id || 0
   )
-
-  return results.map(({ id, member_order, standups_id, team_members_id }: StandupOrderDb) => ({
-    id: id,
-    memberOrder: member_order,
-    standupsId: standups_id,
-    teamMembersId: team_members_id
-  }))
 }
 
-export const getTeamMembers = async (connection: Connection): Promise<[TeamMember]> => {
-  const { results } = await query(connection, 'SELECT id, name FROM team_members')
-  return results
+export const getStandupOrders = (): StandupOrder[] => {
+  const standupOrders: StandupOrder[] = inMemoryDb.get('standup_orders') || []
+  const standupOrdersCopy = [...standupOrders]
+  return standupOrdersCopy.sort(
+    (standupOrder1, standupOrder2) =>
+      standupOrder1.standups_id - standupOrder2.standups_id ||
+      standupOrder1.member_order - standupOrder2.member_order
+  )
 }
 
-export const isUserInvited = async (connection: Connection, email: string): Promise<boolean> => {
-  const sql = mysql.format('SELECT id FROM invited_users WHERE email = ?', [email])
-  const { results } = await query(connection, sql)
-  return !!results?.length
+export const getTeamMembers = (): TeamMember[] => {
+  const teamMembers: TeamMember[] = inMemoryDb.get('team_members') || []
+  return teamMembers
+}
+
+export const isUserInvited = (email: string): boolean => {
+  const invitedUsers: InvitedUser[] = inMemoryDb.get('invited_users') || []
+  return invitedUsers.some(invitedUser => invitedUser.email === email)
 }
