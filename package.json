@@ -33,7 +33,7 @@
     "prettier": "3.0.3"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=18"
   },
   "lint-staged": {
     "**/*.ts": "prettier --write --ignore-unknown",
