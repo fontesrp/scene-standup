@@ -1,0 +1,23 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["6W78ZB66SK.com.emocha.app"],
+        "components": [
+          {
+            "#": "no_universal_links",
+            "comment": "Matches any URL whose fragment equals no_universal_links and instructs the system not to open it as a universal link",
+            "exclude": true
+          },
+          {
+            "/": "/*",
+            "comment": "Matches any URL path, allowing universal links to open any screen in the app"
+          }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["6W78ZB66SK.com.emocha.app"]
+  }
+}
